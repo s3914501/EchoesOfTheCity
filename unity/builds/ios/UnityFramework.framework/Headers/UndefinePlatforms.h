@@ -1,0 +1,22 @@
+
+
+#ifdef DETAIL__PLATFORMS_HAD_BEEN_UNDEFINED_BY_UNDEFINEPLATFORMS_H
+#error "UndefinePlatforms.h has been included more than once or RedefinePlatforms.h is missing."
+#endif
+
+#if PLATFORM_IOS
+    #define DETAIL__TEMP_PLATFORM_IOS_WAS_1
+#endif
+#undef PLATFORM_IOS
+
+#if PLATFORM_TVOS
+    #define DETAIL__TEMP_PLATFORM_TVOS_WAS_1
+#endif
+#undef PLATFORM_TVOS
+
+#if PLATFORM_VISIONOS
+#define DETAIL__TEMP_PLATFORM_VISIONOS_WAS_1
+#endif
+#undef PLATFORM_VISIONOS
+
+#define DETAIL__PLATFORMS_HAD_BEEN_UNDEFINED_BY_UNDEFINEPLATFORMS_H
