@@ -1,408 +1,221 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
-  Alert,
-  Animated,
-  Image,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const WHITE = "#FFFFFF";
-const BLACK = "#000000";
-
-const MEMORY_GREEN = "#67B85A";
+const GREEN = "#67B85A";
 const DARK_GREEN = "#164A2B";
+const WHITE = "#FFFFFF";
 
-const GRADIENT_TOP = "#003F38";
-const GRADIENT_MID = "#006B5E";
-const GRADIENT_BOTTOM = "#12BFA8";
-
-const WAVE_GREEN = "#5FE0D7";
-
-const memorySeats = [
+const memories = [
   {
     id: "memory-seat-1",
-    latitude: -37.80485,
-    longitude: 144.96355,
-    theme: "normal",
+    label: "Cardigan Festival",
+    x: "30%",
+    y: "34%",
+    story:
+      "The Cardigan Festival made the street feel completely different. There was music, food, people talking and so many small moments happening around us. For a few hours, Cardigan Street felt less like a road and more like a place where everyone could belong.",
+    author: "Mia",
+    date: "21/09/2026",
   },
   {
     id: "memory-seat-2",
-    latitude: -37.80555,
-    longitude: 144.96505,
-    theme: "normal",
+    label: "City Routine",
+    x: "62%",
+    y: "27%",
+    story:
+      "I used to walk through this part of Melbourne every day without really noticing it. After a while, the familiar buildings, streets and people started becoming part of my routine. Sometimes you don't realise a place matters until you look back.",
+    author: "Daniel",
+    date: "14/03/2026",
   },
   {
     id: "memory-seat-3",
-    latitude: -37.80635,
-    longitude: 144.96355,
-    theme: "normal",
+    label: "Quiet Moment",
+    x: "49%",
+    y: "52%",
+    story:
+      "Whenever university gets overwhelming, I come here for a few minutes and just sit. The trees make the city feel quieter, even though the streets around me are still busy. It has become my little pause in Melbourne.",
+    author: "Sophie",
+    date: "02/05/2026",
   },
   {
     id: "memory-seat-4",
-    latitude: -37.80595,
-    longitude: 144.96195,
-    theme: "normal",
+    label: "Community",
+    x: "23%",
+    y: "65%",
+    story:
+      "One of my favourite things about Melbourne is how many different communities can exist within the same neighbourhood. The food, buildings, languages and people around these streets all add another layer to the city.",
+    author: "Marco",
+    date: "27/06/2026",
   },
   {
     id: "state-library-inside",
-    latitude: -37.80925,
-    longitude: 144.96535,
-    theme: "dark",
+    label: "State Library",
+    x: "77%",
+    y: "57%",
+    story:
+      "Won my first chess game in Melbourne here and won 10 bucks from a bet with a stranger. 😆",
+    author: "John White",
+    date: "13/02/2026",
   },
   {
     id: "state-library-front",
-    latitude: -37.80975,
-    longitude: 144.96515,
-    theme: "dark",
+    label: "Lost Ring",
+    x: "69%",
+    y: "75%",
+    story:
+      "Lost my wedding ring in this bush two years ago and cannot find it. 😭😭😭",
+    author: "Anna",
+    date: "08/08/2024",
   },
   {
     id: "state-library-surrounding",
-    latitude: -37.81025,
-    longitude: 144.96575,
-    theme: "dark",
+    label: "City Reflection",
+    x: "43%",
+    y: "81%",
+    story:
+      "I remember sitting here after a long day and watching people move through the city. Everyone seemed to be going somewhere, but for a moment I had nowhere I needed to be.",
+    author: "Alex",
+    date: "19/11/2025",
   },
 ];
 
-const memoryContent: Record<
-  string,
-  {
-    story: string;
-    author: string;
-    date: string;
-  }
-> = {
-  "memory-seat-1": {
-    story:
-      "“The Cardigan Festival made the street feel completely different. There was music, food, people talking and so many small moments happening around us. For a few hours, Cardigan Street felt less like a road and more like a place where everyone could belong.”",
-    author: "– Mia",
-    date: "21/09/2026",
-  },
-
-  "memory-seat-2": {
-    story:
-      "“I used to walk through this part of Melbourne every day without really noticing it. After a while, the familiar buildings, streets and people started becoming part of my routine. Sometimes you don't realise a place matters until you look back.”",
-    author: "– Daniel",
-    date: "14/03/2026",
-  },
-
-  "memory-seat-3": {
-    story:
-      "“Whenever university gets overwhelming, I come here for a few minutes and just sit. The trees make the city feel quieter, even though the streets around me are still busy. It has become my little pause in Melbourne.”",
-    author: "– Sophie",
-    date: "02/05/2026",
-  },
-
-  "memory-seat-4": {
-    story:
-      "“One of my favourite things about Melbourne is how many different communities can exist within the same neighbourhood. The food, buildings, languages and people around these streets all add another layer to the city.”",
-    author: "– Marco",
-    date: "27/06/2026",
-  },
-
-  "state-library-inside": {
-    story:
-      "“Won my first chess game in Melbourne here and won 10 bucks from a bet with a stranger. 😆”",
-    author: "– John White",
-    date: "13/02/2026",
-  },
-
-  "state-library-front": {
-    story:
-      "“Lost my wedding ring in this bush two years ago and cannot find it. 😭😭😭”",
-    author: "– Anna",
-    date: "08/08/2024",
-  },
-
-  "state-library-surrounding": {
-    story:
-      "“I remember sitting here after a long day and watching people move through the city. Everyone seemed to be going somewhere, but for a moment I had nowhere I needed to be.”",
-    author: "– Alex",
-    date: "19/11/2025",
-  },
-};
-
-const waveformHeights = [18, 30, 45, 28, 52, 34, 20];
-
 export default function MapScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const [selectedMemory, setSelectedMemory] = useState<string | null>(null);
-
-  const slideAnim = useRef(new Animated.Value(500)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const waveAnimations = useRef(
-    waveformHeights.map(() => new Animated.Value(0.5)),
-  ).current;
-
-  useEffect(() => {
-    const requestLocationPermission = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        Alert.alert(
-          "Location access needed",
-          "Allow location access to see your position on the map.",
-        );
-      }
-    };
-
-    requestLocationPermission();
-  }, []);
-
-  useEffect(() => {
-    if (selectedMemory) {
-      slideAnim.setValue(500);
-      fadeAnim.setValue(0);
-
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          damping: 22,
-          stiffness: 180,
-          mass: 0.8,
-          useNativeDriver: true,
-        }),
-
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      waveAnimations.forEach((animation, index) => {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(animation, {
-              toValue: index % 2 === 0 ? 1 : 0.35,
-              duration: 420 + index * 55,
-              useNativeDriver: true,
-            }),
-            Animated.timing(animation, {
-              toValue: index % 2 === 0 ? 0.35 : 1,
-              duration: 420 + index * 55,
-              useNativeDriver: true,
-            }),
-          ]),
-        ).start();
-      });
-    } else {
-      waveAnimations.forEach((animation) => {
-        animation.stopAnimation();
-      });
-    }
-  }, [selectedMemory]);
-
-  const openMemory = (memoryId: string) => {
-    setSelectedMemory(memoryId);
-  };
-
-  const closeMemory = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 500,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setSelectedMemory(null);
-    });
-  };
-
-  const selectedContent = selectedMemory ? memoryContent[selectedMemory] : null;
+  const selected = memories.find((memory) => memory.id === selectedId);
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: -37.8072,
-          longitude: 144.9643,
-          latitudeDelta: 0.009,
-          longitudeDelta: 0.009,
-        }}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-        showsCompass={false}
-        showsScale={false}
-      >
-        {memorySeats.map((seat) => {
-          const isDark = seat.theme === "dark";
+      <View style={styles.map}>
+        <View style={styles.park}>
+          <Text style={styles.parkLabel}>CARLTON GARDENS</Text>
+        </View>
 
-          return (
-            <Marker
-              key={seat.id}
-              coordinate={{
-                latitude: seat.latitude,
-                longitude: seat.longitude,
-              }}
-              anchor={{ x: 0.5, y: 0.5 }}
+        <View style={[styles.road, styles.roadHorizontalOne]} />
+        <View style={[styles.road, styles.roadHorizontalTwo]} />
+        <View style={[styles.road, styles.roadVerticalOne]} />
+        <View style={[styles.road, styles.roadVerticalTwo]} />
+        <View style={[styles.road, styles.roadDiagonal]} />
+
+        <View style={styles.streetLabelOne}>
+          <Text style={styles.streetText}>CARDIGAN STREET</Text>
+        </View>
+        <View style={styles.streetLabelTwo}>
+          <Text style={styles.streetText}>MELBOURNE CBD</Text>
+        </View>
+
+        {memories.map((memory, index) => (
+          <Pressable
+            key={memory.id}
+            onPress={() => setSelectedId(memory.id)}
+            style={[
+              styles.markerPosition,
+              { left: memory.x as `${number}%`, top: memory.y as `${number}%` },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Open memory: ${memory.label}`}
+          >
+            <View
+              style={[
+                styles.marker,
+                index >= 4 && styles.darkMarker,
+                selectedId === memory.id && styles.selectedMarker,
+              ]}
             >
-              <Pressable
-                onPress={() => openMemory(seat.id)}
-                style={({ pressed }) => [
-                  styles.markerTouchable,
-                  pressed && styles.markerTouchablePressed,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.memorySeatMarker,
-                    isDark && styles.darkMemorySeatMarker,
-                  ]}
-                >
-                  <Image
-                    source={
-                      isDark
-                        ? require("../../assets/images/memory-seeds-dark.png")
-                        : require("../../assets/images/memory-seeds.jpg")
-                    }
-                    style={styles.memorySeatImage}
-                    resizeMode="contain"
-                  />
-                </View>
-              </Pressable>
-            </Marker>
-          );
-        })}
-      </MapView>
+              <Ionicons
+                name="leaf"
+                size={22}
+                color={index >= 4 ? "#C8F5D0" : DARK_GREEN}
+              />
+            </View>
+          </Pressable>
+        ))}
+      </View>
 
-      <View
-        pointerEvents="none"
-        style={[styles.mapTitleWrapper, { top: insets.top + 10 }]}
-      >
+      <View style={styles.title}>
         <LinearGradient
-          colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
-          locations={[0, 0.45, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.mapTitleGradient}
+          colors={["#003F38", "#006B5E", "#12BFA8"]}
+          style={styles.titleGradient}
         >
-          <Text style={styles.mapTitleText}>Memory Seed Map</Text>
+          <Text style={styles.titleText}>Memory Seed Map</Text>
         </LinearGradient>
       </View>
 
       <Pressable
-        style={({ pressed }) => [
-          styles.closeButton,
-          { top: insets.top + 14 },
-          pressed && styles.pressed,
-        ]}
         onPress={() => router.back()}
+        style={styles.closeButton}
+        accessibilityRole="button"
+        accessibilityLabel="Close map"
       >
         <Ionicons name="close" size={25} color={WHITE} />
       </Pressable>
 
+      <View style={styles.legend}>
+        <View style={styles.legendDot} />
+        <Text style={styles.legendText}>Explore community memories</Text>
+      </View>
+
       <Modal
-        visible={selectedMemory !== null}
+        visible={!!selected}
         transparent
-        animationType="none"
-        onRequestClose={closeMemory}
+        animationType="slide"
+        onRequestClose={() => setSelectedId(null)}
       >
-        <View style={styles.modalContainer}>
-          <Animated.View
-            style={[styles.backgroundFade, { opacity: fadeAnim }]}
-          />
+        <View style={styles.modalBackground}>
+          <Pressable style={styles.scrim} onPress={() => setSelectedId(null)} />
 
-          <Animated.View
-            style={[
-              styles.memoryPanelWrapper,
-              {
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.grabberContainer}>
-              <View style={styles.panelHandle} />
-            </View>
-
+          {selected && (
             <LinearGradient
-              colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+              colors={["#003F38", "#006B5E", "#12BFA8"]}
               locations={[0, 0.45, 1]}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={[
-                styles.memoryPanel,
-                {
-                  paddingTop: Math.max(insets.top, 18),
-                  paddingBottom: Math.max(insets.bottom, 18),
-                },
-              ]}
+              style={styles.panel}
             >
+              <View style={styles.handle} />
+
               <Pressable
-                style={({ pressed }) => [
-                  styles.backButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={closeMemory}
+                onPress={() => setSelectedId(null)}
+                style={styles.backButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close memory"
               >
                 <Ionicons name="arrow-back" size={23} color={WHITE} />
               </Pressable>
 
-              <View style={styles.storyIconContainer}>
-                <Image
-                  source={require("../../assets/images/memory-seeds-dark.png")}
-                  style={styles.storyIcon}
-                  resizeMode="contain"
-                />
+              <View style={styles.seedIcon}>
+                <Ionicons name="leaf" size={36} color={DARK_GREEN} />
               </View>
 
-              <View style={styles.waveform}>
-                {waveformHeights.map((height, index) => (
-                  <Animated.View
-                    key={index}
-                    style={[
-                      styles.waveBar,
-                      {
-                        height,
-                        transform: [{ scaleY: waveAnimations[index] }],
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
+              <Text style={styles.storyLabel}>STORY SEED</Text>
 
-              <View style={styles.storyContent}>
-                <Text style={styles.storyLabel}>STORY SEED:</Text>
-
-                <Text style={styles.storyText}>{selectedContent?.story}</Text>
-
-                <View style={styles.authorContainer}>
-                  <Text style={styles.author}>{selectedContent?.author}</Text>
-
-                  <Text style={styles.date}>{selectedContent?.date}</Text>
-                </View>
-              </View>
+              <ScrollView
+                style={styles.storyScroll}
+                contentContainerStyle={styles.storyContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.storyText}>“{selected.story}”</Text>
+                <Text style={styles.author}>— {selected.author}</Text>
+                <Text style={styles.date}>{selected.date}</Text>
+              </ScrollView>
 
               <Pressable
-                style={({ pressed }) => [
-                  styles.doneButton,
-                  pressed && styles.donePressed,
-                ]}
-                onPress={closeMemory}
+                onPress={() => setSelectedId(null)}
+                style={styles.doneButton}
+                accessibilityRole="button"
               >
                 <Text style={styles.doneText}>Done</Text>
               </Pressable>
             </LinearGradient>
-          </Animated.View>
+          )}
         </View>
       </Modal>
     </View>
@@ -412,140 +225,202 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BLACK,
+    backgroundColor: "#080C0B",
+    overflow: "hidden",
   },
-
   map: {
-    width: "100%",
-    height: "100%",
+    flex: 1,
+    backgroundColor: "#192521",
+    overflow: "hidden",
   },
-
-  mapTitleWrapper: {
+  park: {
     position: "absolute",
-    alignSelf: "center",
-    zIndex: 15,
-    elevation: 15,
+    left: "8%",
+    top: "13%",
+    width: "44%",
+    height: "35%",
+    backgroundColor: "#243D2C",
+    borderRadius: 24,
+    transform: [{ rotate: "-8deg" }],
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  mapTitleGradient: {
-    minWidth: 190,
-    height: 38,
-    paddingHorizontal: 18,
+  parkLabel: {
+    color: "#7FA889",
+    fontSize: 11,
+    letterSpacing: 2,
+    fontWeight: "600",
+  },
+  road: {
+    position: "absolute",
+    backgroundColor: "#303A36",
+    borderColor: "#45514B",
+    borderWidth: 1,
+  },
+  roadHorizontalOne: {
+    left: "-10%",
+    top: "30%",
+    width: "120%",
+    height: 25,
+    transform: [{ rotate: "-5deg" }],
+  },
+  roadHorizontalTwo: {
+    left: "-10%",
+    top: "62%",
+    width: "120%",
+    height: 30,
+    transform: [{ rotate: "4deg" }],
+  },
+  roadVerticalOne: {
+    left: "37%",
+    top: "-10%",
+    width: 25,
+    height: "120%",
+    transform: [{ rotate: "8deg" }],
+  },
+  roadVerticalTwo: {
+    left: "70%",
+    top: "-10%",
+    width: 23,
+    height: "120%",
+    transform: [{ rotate: "-6deg" }],
+  },
+  roadDiagonal: {
+    left: "-10%",
+    top: "48%",
+    width: "120%",
+    height: 18,
+    transform: [{ rotate: "-23deg" }],
+    opacity: 0.8,
+  },
+  streetLabelOne: {
+    position: "absolute",
+    left: "8%",
+    top: "53%",
+    transform: [{ rotate: "-23deg" }],
+  },
+  streetLabelTwo: {
+    position: "absolute",
+    right: "8%",
+    top: "42%",
+  },
+  streetText: {
+    color: "#8B9890",
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  markerPosition: {
+    position: "absolute",
+    marginLeft: -22,
+    marginTop: -22,
+    zIndex: 5,
+  },
+  marker: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: WHITE,
+    borderWidth: 2,
+    borderColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  darkMarker: {
+    backgroundColor: DARK_GREEN,
+  },
+  selectedMarker: {
+    borderWidth: 3,
+    borderColor: "#B8F5A9",
+    transform: [{ scale: 1.12 }],
+  },
+  title: {
+    position: "absolute",
+    top: 18,
+    left: 16,
+    right: 70,
+    alignItems: "center",
+  },
+  titleGradient: {
+    paddingHorizontal: 20,
+    height: 40,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: "rgba(95,224,215,0.48)",
     alignItems: "center",
     justifyContent: "center",
   },
-
-  mapTitleText: {
+  titleText: {
     color: "#C8F5D0",
     fontSize: 13,
     fontWeight: "600",
     letterSpacing: 0.6,
   },
-
-  markerTouchable: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  markerTouchablePressed: {
-    transform: [{ scale: 0.92 }],
-    opacity: 0.75,
-  },
-
-  memorySeatMarker: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: WHITE,
-    borderWidth: 2,
-    borderColor: MEMORY_GREEN,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-
-  darkMemorySeatMarker: {
-    backgroundColor: DARK_GREEN,
-    borderColor: MEMORY_GREEN,
-  },
-
-  memorySeatImage: {
-    width: 31,
-    height: 31,
-  },
-
   closeButton: {
     position: "absolute",
     right: 18,
+    top: 16,
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.78)",
+    backgroundColor: "rgba(0,0,0,0.8)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 20,
-    elevation: 20,
   },
-
-  pressed: {
-    opacity: 0.65,
-    transform: [{ scale: 0.94 }],
+  legend: {
+    position: "absolute",
+    bottom: 20,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.8)",
   },
-
-  modalContainer: {
+  legendDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: GREEN,
+  },
+  legendText: {
+    color: WHITE,
+    fontSize: 12,
+  },
+  modalBackground: {
     flex: 1,
     justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
-
-  backgroundFade: {
+  scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.42)",
   },
-
-  memoryPanelWrapper: {
+  panel: {
+    height: "75%",
     width: "100%",
-    height: "72%",
-    position: "relative",
-  },
-
-  grabberContainer: {
-    position: "absolute",
-    top: 10,
-    left: 0,
-    right: 0,
-    height: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 50,
-    elevation: 50,
-  },
-
-  panelHandle: {
-    width: 40,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.86)",
-  },
-
-  memoryPanel: {
-    width: "100%",
-    height: "100%",
-    borderTopLeftRadius: 42,
-    borderTopRightRadius: 42,
-    paddingHorizontal: 34,
+    borderTopLeftRadius: 38,
+    borderTopRightRadius: 38,
+    paddingTop: 35,
+    paddingHorizontal: 28,
+    paddingBottom: 24,
     alignItems: "center",
     overflow: "hidden",
   },
-
+  handle: {
+    position: "absolute",
+    top: 10,
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.8)",
+  },
   backButton: {
     position: "absolute",
     left: 20,
-    top: 23,
+    top: 22,
     width: 42,
     height: 42,
     borderRadius: 21,
@@ -555,78 +430,47 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.38)",
     backgroundColor: "rgba(255,255,255,0.09)",
   },
-
-  storyIconContainer: {
+  seedIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: WHITE,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
+    marginBottom: 24,
   },
-
-  storyIcon: {
-    width: 45,
-    height: 45,
-  },
-
-  waveform: {
-    height: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    marginTop: 12,
-    marginBottom: 13,
-  },
-
-  waveBar: {
-    width: 8,
-    borderRadius: 5,
-    backgroundColor: WAVE_GREEN,
-  },
-
-  storyContent: {
-    width: "100%",
-    flex: 1,
-    paddingTop: 2,
-  },
-
   storyLabel: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 15,
-    fontWeight: "500",
-    letterSpacing: 0.35,
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: 1,
     marginBottom: 12,
+    alignSelf: "flex-start",
   },
-
+  storyScroll: {
+    flex: 1,
+    width: "100%",
+  },
+  storyContent: {
+    paddingBottom: 16,
+  },
   storyText: {
     color: WHITE,
     fontSize: 18,
-    lineHeight: 25,
-    fontWeight: "400",
+    lineHeight: 27,
   },
-
-  authorContainer: {
-    alignItems: "flex-end",
-    marginTop: 12,
-    paddingRight: 2,
-  },
-
   author: {
     color: WHITE,
-    fontSize: 20,
-    lineHeight: 25,
-    fontWeight: "400",
+    fontSize: 19,
+    textAlign: "right",
+    marginTop: 20,
   },
-
   date: {
     color: "rgba(255,255,255,0.72)",
-    fontSize: 14,
-    marginTop: 2,
+    fontSize: 13,
+    textAlign: "right",
+    marginTop: 4,
   },
-
   doneButton: {
     width: 175,
     height: 46,
@@ -636,15 +480,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(95,224,215,0.15)",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 14,
-    marginBottom: 2,
+    marginTop: 12,
   },
-
-  donePressed: {
-    opacity: 0.65,
-    transform: [{ scale: 0.97 }],
-  },
-
   doneText: {
     color: WHITE,
     fontSize: 17,
